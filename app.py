@@ -1,12 +1,23 @@
 import pandas as pd
 
+# Load dataset
 df = pd.read_csv("data/sales.csv")
 
-print("Dataset:")
-print(df)
+print("\n--- DATASET PREVIEW ---")
+print(df.head())
 
-print("\nDataset Information:")
-print(df.info())
+print("\n--- SHAPE ---")
+print(f"Rows: {df.shape[0]}")
+print(f"Columns: {df.shape[1]}")
 
-print("\nBasic Statistics:")
+print("\n--- COLUMN TYPES ---")
+print(df.dtypes)
+
+print("\n--- MISSING VALUES ---")
+print(df.isnull().sum())
+
+print("\n--- UNIQUE VALUES ---")
+print(df.nunique())
+
+print("\n--- NUMERICAL SUMMARY ---")
 print(df.describe())
