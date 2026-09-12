@@ -4,6 +4,43 @@ import ollama
 # Load dataset
 df = pd.read_csv("data/sales.csv")
 
+# Detect numerical anomalies using IQR
+def detect_anomalies(dataframe):
+    anomalies = {}
+
+    numeric_columns = dataframe.select_dtypes(include="number").columns
+
+    for column in numeric_columns:
+        Q1 = dataframe[column].quantile(0.25)
+        Q3 = dataframe[column].quantile(0.75)
+
+        IQR = Q3 - Q1
+
+        lower_bound = Q1 - 1.5 * IQR
+        upper_bound = Q3 + 1.5 * IQR
+
+        unusual_rows = dataframe[
+            (dataframe[column] < lower_bound)
+            | (dataframe[column] > upper_bound)
+        ]
+
+        if not unusual_rows.empty:
+            anomalies[column] = unusual_rows
+
+    return anomalies
+
+
+anomalies = detect_anomalies(df)
+
+print("\n--- ANOMALY REPORT ---")
+
+if not anomalies:
+    print("No obvious numerical anomalies detected.")
+else:
+    for column, rows in anomalies.items():
+        print(f"\nUnusual values found in: {column}")
+        print(rows)
+
 print("Available columns:")
 print(", ".join(df.columns))
 
