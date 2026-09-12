@@ -41,6 +41,55 @@ else:
         print(f"\nUnusual values found in: {column}")
         print(rows)
 
+import matplotlib.pyplot as plt
+
+# Create a simple sales chart
+sales_by_product = df.groupby("product")["quantity"].sum()
+
+plt.figure(figsize=(8, 5))
+sales_by_product.plot(kind="bar")
+
+plt.title("Quantity Sold by Product")
+plt.xlabel("Product")
+plt.ylabel("Quantity Sold")
+plt.tight_layout()
+
+plt.savefig("sales_by_product.png")
+plt.show()
+
+insights = f"""
+Product sales:
+
+{sales_by_product.to_string()}
+
+Detected anomalies:
+
+{anomalies}
+"""
+
+response = ollama.chat(
+    model="qwen3:4b",
+    messages=[
+        {
+            "role": "user",
+            "content": f"""
+You are a data analyst.
+
+Analyze these results and provide:
+1. The most important finding
+2. Any unusual behavior
+3. A practical recommendation
+
+Results:
+{insights}
+"""
+        }
+    ]
+)
+
+print("\n--- AI INSIGHTS ---")
+print(response["message"]["content"])
+
 print("Available columns:")
 print(", ".join(df.columns))
 
