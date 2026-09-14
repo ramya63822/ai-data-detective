@@ -26,28 +26,58 @@ Return ONLY the category name.
 
 
 def answer_question(df, question):
-    category = classify_question(question, df.columns)
+    operation = classify_question(question, df.columns)
 
-    if category == "highest_product_sales":
+    if operation == "highest_product_sales":
         sales = get_sales_by_product(df)
         product = sales.idxmax()
         value = sales.max()
 
-        return f"Highest selling product: {product}\nQuantity sold: {value}"
+        result = f"""
+Highest selling product: {product}
+Quantity sold: {value}
+"""
 
-    elif category == "total_sales":
+    elif operation == "total_sales":
         total = get_total_sales(df)
-        return f"Total sales: ₹{total:,.2f}"
 
-    elif category == "average_price":
+        result = f"""
+Total sales: ₹{total:,.2f}
+"""
+
+    elif operation == "average_price":
         average = get_average_price(df)
-        return f"Average price: ₹{average:,.2f}"
 
-    elif category == "dataset_summary":
-        return (
-            f"Rows: {df.shape[0]}\n"
-            f"Columns: {df.shape[1]}\n\n"
-            f"{df.describe()}"
-        )
+        result = f"""
+Average price: ₹{average:,.2f}
+"""
 
-    return "Sorry, I don't understand that question yet."
+    elif operation == "dataset_summary":
+        result = f"""
+Rows: {df.shape[0]}
+Columns: {df.shape[1]}
+
+Statistics:
+{df.describe().to_string()}
+"""
+
+    else:
+        return "Sorry, I don't understand that question yet."
+
+    # Ask Ollama to explain the result
+    explanation_prompt = f"""
+You are a helpful data analyst.
+
+User question:
+{question}
+
+Exact result calculated by Python:
+{result}
+
+Explain this result clearly in 2-4 sentences.
+Do not invent any numbers or facts.
+"""
+
+    explanation = ask_llm(explanation_prompt)
+
+    return explanation
