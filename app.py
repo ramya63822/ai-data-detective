@@ -1,7 +1,7 @@
 from analysis import load_data, get_sales_by_product
 from anomaly import detect_anomalies
 from llm import ask_llm
-
+from investigator import investigate_dataset
 
 df = load_data("data/sales.csv")
 
@@ -9,6 +9,11 @@ print("\n--- DATASET ---")
 print(df)
 
 anomalies = detect_anomalies(df)
+print("\n--- AUTOMATIC DATA INVESTIGATION ---")
+
+investigation = investigate_dataset(df)
+
+print(investigation)
 
 print("\n--- ANOMALIES ---")
 
