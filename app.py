@@ -1,58 +1,27 @@
-from analysis import load_data, get_sales_by_product
-from anomaly import detect_anomalies
-from llm import ask_llm
+"""Command-line smoke test for the AI Data Detective backend."""
+
+from pathlib import Path
+
+from analysis import load_data, profile_dataset
 from investigator import investigate_dataset
 
-df = load_data("data/sales.csv")
 
-print("\n--- DATASET ---")
-print(df)
-
-anomalies = detect_anomalies(df)
-print("\n--- AUTOMATIC DATA INVESTIGATION ---")
-
-investigation = investigate_dataset(df)
-
-print(investigation)
-
-print("\n--- ANOMALIES ---")
-
-if not anomalies:
-    print("No obvious numerical anomalies detected.")
-else:
-    for column, rows in anomalies.items():
-        print(f"\nUnusual values found in: {column}")
-        print(rows)
+DATA_FILE = Path("data/sample_sales.csv")
 
 
-sales_by_product = get_sales_by_product(df)
+def main() -> None:
+    df = load_data(DATA_FILE, DATA_FILE.name)
+    profile = profile_dataset(df)
 
-prompt = f"""
-You are a data analyst.
+    print("\n=== AI DATA DETECTIVE ===")
+    print(f"Rows: {profile['rows']}")
+    print(f"Columns: {profile['columns']}")
+    print(f"Quality score: {profile['quality_score']}/100")
 
-Product sales:
-{sales_by_product.to_string()}
+    print("\nRunning investigation with Ollama...")
+    report, _, _ = investigate_dataset(df)
+    print("\n" + report)
 
-Detected anomalies:
-{anomalies}
 
-Provide:
-1. The most important finding
-2. Any unusual behavior
-3. One practical recommendation
-"""
-
-insights = ask_llm(prompt)
-
-print("\n--- AI INSIGHTS ---")
-print(insights)
-
-from query import answer_question
-
-# Ask the user a question
-question = input("\nAsk a question about the dataset: ")
-
-answer = answer_question(df, question)
-
-print("\n--- ANSWER ---")
-print(answer)
+if __name__ == "__main__":
+    main()

@@ -1,91 +1,45 @@
-from analysis import get_sales_by_product
-from anomaly import detect_anomalies
+from __future__ import annotations
+
+import json
+
+from decision_engine import build_evidence
 from llm import ask_llm
 
 
 def investigate_dataset(df):
-    findings = []
-
-    # Basic information
-    findings.append(
-        f"The dataset contains {df.shape[0]} rows and {df.shape[1]} columns."
-    )
-
-    # Missing values
-    missing = df.isnull().sum()
-    missing = missing[missing > 0]
-
-    if not missing.empty:
-        findings.append(
-            f"Missing values were found in: {missing.to_dict()}"
-        )
-    else:
-        findings.append("No missing values were detected.")
-
-    # Highest-selling product
-    if "product" in df.columns and "quantity" in df.columns:
-        product_sales = get_sales_by_product(df)
-
-        top_product = product_sales.idxmax()
-        top_quantity = product_sales.max()
-
-        findings.append(
-            f"{top_product} has the highest quantity sold with "
-            f"{top_quantity} units."
-        )
-
-    # Highest-selling region
-    if "region" in df.columns and "quantity" in df.columns:
-        region_sales = df.groupby("region")["quantity"].sum()
-
-        top_region = region_sales.idxmax()
-        top_region_quantity = region_sales.max()
-
-        findings.append(
-            f"{top_region} has the highest quantity sold with "
-            f"{top_region_quantity} units."
-        )
-
-    # Price range
-    if "price" in df.columns:
-        min_price = df["price"].min()
-        max_price = df["price"].max()
-
-        findings.append(
-            f"Prices range from ₹{min_price:,.2f} to ₹{max_price:,.2f}."
-        )
-
-    # Anomalies
-    anomalies = detect_anomalies(df)
-
-    if anomalies:
-        for column, rows in anomalies.items():
-            findings.append(
-                f"Potential anomalies were detected in {column}: "
-                f"{len(rows)} unusual row(s)."
-            )
-    else:
-        findings.append("No obvious numerical anomalies were detected.")
-
-    # Ask Ollama to interpret the findings
-    findings_text = "\n".join(f"- {finding}" for finding in findings)
-
+    evidence = build_evidence(df)
     prompt = f"""
-You are an expert data analyst.
+You are producing an evidence-grounded executive analytics brief.
 
-You have been given the following findings from a dataset:
+VERIFIED EVIDENCE (computed by Python):
+{json.dumps(evidence, indent=2, default=str)}
 
-{findings_text}
+Create a decision-oriented report using exactly these sections:
 
-Create a concise investigation report with these sections:
+### Executive Summary
+State the dataset scope and the most important verified signals.
 
-1. KEY FINDINGS
-2. DATA QUALITY
-3. ANOMALIES
-4. RECOMMENDATION
+### Performance & Patterns
+Explain the strongest measurable patterns, concentration, and trends.
 
-Use only the information provided.
-Do not invent numbers or facts.
+### Data Quality & Risk
+Discuss completeness, duplicates, and potential anomalies. Never label an anomaly as a confirmed error.
+
+### Potential Drivers
+Discuss only the supplied correlation evidence. Explicitly avoid causal claims.
+
+### Recommended Investigations
+Give 3-5 concrete next analyses/questions. Recommendations must be grounded in available evidence.
+
+Rules:
+- Do not invent business context.
+- Do not fabricate KPIs.
+- Never infer causality from correlation.
+- If evidence is insufficient, say so.
 """
-
-    return ask_llm(prompt)
+    report = ask_llm(
+        prompt,
+        max_output_tokens=900,
+        system_instruction="You are a rigorous analytics consultant. Separate evidence, interpretation, and recommendations.",
+    )
+    return report, evidence["profile"], evidence["anomalies"]

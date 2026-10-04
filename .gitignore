@@ -1,4 +1,7 @@
 venv/
 __pycache__/
 *.pyc
-sales_by_product.png
+.env
+*.log
+.streamlit/
+.pytest_cache/
