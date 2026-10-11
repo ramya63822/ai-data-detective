@@ -1,7 +1,46 @@
-venv/
-__pycache__/
-*.pyc
+# Secrets
 .env
-*.log
-.streamlit/
+.streamlit/secrets.toml
+
+# Python environments and generated files
+venv/
+.venv/
+__pycache__/
+*.py[cod]
 .pytest_cache/
+.coverage
+htmlcov/
+
+# Local/editor files
+.DS_Store
+.vscode/
+.idea/
+```gitignore
+# Python cache files
+__pycache__/
+*.py[cod]
+
+# Virtual environments
+venv/
+.venv/
+
+# Environment variables and API keys
+.env
+.env.*
+
+# Keep example environment configuration
+!.env.example
+
+# IDE and editor files
+.vscode/
+.idea/
+
+# Test and coverage files
+.pytest_cache/
+.coverage
+htmlcov/
+
+# OS files
+.DS_Store
+Thumbs.db
+```

@@ -396,7 +396,7 @@ def test_openai_connection() -> tuple[bool, str]:
         response = client.responses.create(
             model=c["openai_model"],
             input="Reply with exactly: OK",
-            max_output_tokens=32,
+            max_output_tokens=8,
         )
 
         if not (getattr(response, "output_text", "") or "").strip():
