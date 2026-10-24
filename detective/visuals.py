@@ -47,21 +47,85 @@ def trend_chart(ds: Dataset, ts, forecast: Optional[dict] = None, title: str | N
     return _base(fig, title or f"{L} over time", 380)
 
 
+
 def waterfall(table: pd.DataFrame, pop: dict, label: str, group_label: str, top_n: int = 7) -> go.Figure:
     t = table.copy()
+
+    if t.empty or not {"delta", "group"}.issubset(t.columns):
+        fig = go.Figure()
+        fig.add_annotation(
+            text="No group-level changes available for this period.",
+            x=0.5, y=0.5, xref="paper", yref="paper",
+            showarrow=False
+        )
+        return _base(fig, f"What moved {label}, by {group_label}")
+
     t = t.reindex(t["delta"].abs().sort_values(ascending=False).index)
     head, rest = t.head(top_n), t.iloc[top_n:]
+
     names = [str(g) for g in head["group"]]
-    vals = list(head["delta"])
-    if len(rest):
-        names.append("All other"), vals.append(float(rest["delta"].sum()))
+    vals = [float(v) for v in head["delta"]]
+
+    if not rest.empty:
+        names.append("All other groups")
+        vals.append(float(rest["delta"].sum()))
+
+    labels = [str(pop["prev_label"])] + names + [str(pop["latest_label"])]
+    values = [float(pop["prev"])] + vals + [float(pop["latest"])]
+
+    measures = ["absolute"] + ["relative"] * len(vals) + ["total"]
+
     fig = go.Figure(go.Waterfall(
-        x=[pop["prev_label"]] + names + [pop["latest_label"]], y=[pop["prev"]] + vals + [pop["latest"]],
-        measure=["absolute"] + ["relative"] * len(vals) + ["total"],
-        increasing=dict(marker=dict(color=GREEN)), decreasing=dict(marker=dict(color=RED)),
-        totals=dict(marker=dict(color=NAVY)), connector=dict(line=dict(color="#c5cad6")),
-        hovertemplate="%{x}: %{y:,.2f}<extra></extra>"))
-    return _base(fig, f"What moved {label}, by {group_label}", 380)
+        x=labels,
+        y=values,
+        measure=measures,
+        increasing=dict(marker=dict(color=GREEN)),
+        decreasing=dict(marker=dict(color=RED)),
+        totals=dict(marker=dict(color=BLUE)),
+        connector=dict(line=dict(color=GREY, width=1)),
+        textposition="none",
+        customdata=[
+            "Starting value",
+            *["Change contributed by this group"] * len(vals),
+            "Ending value",
+        ],
+        hovertemplate=(
+            "<b>%{x}</b><br>"
+            "%{customdata}: %{y:,.2f}"
+            "<extra></extra>"
+        ),
+    ))
+
+    fig = _base(
+        fig,
+        f"What moved {label}, by {group_label}",
+        max(400, 48 * len(labels) + 190),
+    )
+
+    fig.update_layout(
+        margin=dict(l=65, r=35, t=65, b=125),
+        showlegend=False,
+        hoverlabel=dict(
+            bgcolor="#20232b",
+            font=dict(color="#ffffff", size=13),
+        ),
+    )
+
+    fig.update_xaxes(
+        tickangle=-30,
+        automargin=True,
+        tickfont=dict(size=11),
+    )
+
+    fig.update_yaxes(
+        title_text=label,
+        automargin=True,
+        tickformat=",.0f",
+        zeroline=True,
+    )
+
+    return fig
+
 
 
 def ranking_bar(df: pd.DataFrame, label_col: str, value_col: str, title: str, color: str = BLUE, horizontal: bool = True,
