@@ -59,6 +59,14 @@ def build_markdown(name: str, A: Analysis) -> str:
     if A.drivers and A.drivers.get("predictive") and A.drivers["drivers"]:
         out += ["", "## Potential drivers", *[f"- {d['label']} ({d['importance_pct']:.0f}% of relative importance)" for d in A.drivers["drivers"]],
                 "_Associations, not proven causes._"]
+    if A.rankings:
+        out += ["", "## Highest-performing groups"]
+        for dim, ranking in list(A.rankings.items())[:5]:
+            top = ranking.get("top")
+            if top is not None and not top.empty and {"group", "value"}.issubset(top.columns):
+                show = top.head(8).copy()
+                show["group"] = show["group"].astype(str)
+                out += [f"### {ds.label(A.primary)} by {ds.label(dim)}", _md_table(show[["group", "value"]].rename(columns={"group": ds.label(dim), "value": ds.label(A.primary)}))]
     out += ["", "## Data health", f"Score **{q['score']:.0f}/100** ({q['band']}): completeness {q['completeness']:.0f}, "
             f"uniqueness {q['uniqueness']:.0f}, validity {q['validity']:.0f}."]
     out += [f"- **{i['title']}** — {i['detail']}" for i in q["issues"][:8]] or ["- No material issues."]
@@ -80,7 +88,17 @@ def build_html(name: str, A: Analysis) -> str:
         figs.append(vz.waterfall(d0["table"], A.change["pop"], ds.label(A.primary), ds.label(d0["dim"])))
     if A.drivers and A.drivers.get("predictive") and A.drivers["drivers"]:
         figs.append(vz.driver_bars(A.drivers))
-    chart_html = "".join(f.to_html(full_html=False, include_plotlyjs="cdn" if i == 0 else False) for i, f in enumerate(figs))
+    # Datasets without a usable date axis still need informative charts. Use the
+    # actual grouped rankings computed by the analysis engine, not unrelated defaults.
+    for dim, ranking in list(A.rankings.items())[:3]:
+        top = ranking.get("top")
+        if top is not None and not top.empty and {"group", "value"}.issubset(top.columns):
+            figs.append(vz.ranking_bar(top.head(8), "group", "value",
+                                       f"Highest {ds.label(A.primary)} by {ds.label(dim)}",
+                                       fmt_kind=ds.kind(A.primary)))
+    chart_html = "".join(f.to_html(full_html=False, include_plotlyjs=True if i == 0 else False) for i, f in enumerate(figs))
+    if not chart_html:
+        chart_html = "<p>No chart could be generated from the available fields. Add a date field for trends or usable numeric and category fields for grouped comparisons.</p>"
 
     def items(fs):
         return "".join(f"<li><b>{esc(f.title)}.</b> {esc(f.fact)}</li>" for f in fs) or "<li>None identified.</li>"
@@ -88,6 +106,14 @@ def build_html(name: str, A: Analysis) -> str:
     ch = _changes_table(A)
     rows = "".join("<tr>" + "".join(f"<td>{esc(str(v))}</td>" for v in r) + "</tr>" for r in ch.itertuples(index=False))
     head = "".join(f"<th>{esc(str(c))}</th>" for c in ch.columns)
+    ranking_sections = []
+    for dim, ranking in list(A.rankings.items())[:5]:
+        top = ranking.get("top")
+        if top is None or top.empty or not {"group", "value"}.issubset(top.columns):
+            continue
+        table_rows = "".join("<tr>" + f"<td>{esc(str(row.group))}</td><td>{esc(str(row.value))}</td>" + "</tr>" for row in top.head(8).itertuples(index=False))
+        ranking_sections.append(f"<h3>{esc(ds.label(A.primary))} by {esc(ds.label(dim))}</h3><table><tr><th>{esc(ds.label(dim))}</th><th>{esc(ds.label(A.primary))}</th></tr>{table_rows}</table>")
+    rankings_html = "".join(ranking_sections)
     q = A.quality
     return f"""<!doctype html><html><head><meta charset="utf-8"><title>{esc(name)} — Decision Intelligence Report</title>
 <style>body{{font-family:Inter,Segoe UI,sans-serif;max-width:980px;margin:32px auto;color:#1f2a44;line-height:1.55;padding:0 16px}}
@@ -99,8 +125,10 @@ table{{border-collapse:collapse;width:100%}}td,th{{border:1px solid #e1e5ee;padd
 <h2>Key findings</h2><ul>{items([f for f in A.findings if f.importance >= 35][:10])}</ul>
 <h2>Risks and areas requiring attention</h2><ul>{items(A.risks[:6])}</ul>
 <h2>Opportunities and areas worth investigating</h2><ul>{items(A.opportunities[:6])}</ul>
-<h2>Recommended next investigations</h2><ol>{''.join(f'<li>{esc(i)}</li>' for i in A.investigations)}</ol>
+<h2>Recommended next investigations</h2>{('<ol>' + ''.join(f'<li>{esc(i)}</li>' for i in A.investigations) + '</ol>') if A.investigations else '<p>No follow-up actions were generated from the current findings. Review the key findings and data-quality section before making a decision.</p>'}
 {'<h2>Significant changes</h2><table><tr>' + head + '</tr>' + rows + '</table>' if not ch.empty else ''}
+<h2>Grouped performance</h2>{rankings_html or '<p>No grouped performance ranking was available for the detected fields.</p>'}
+<h2>Unusual records</h2>{('<p>' + str(int(A.anomalies.get('total', 0))) + ' statistically unusual records detected. Unusual does not mean incorrect.</p><table><tr>' + ''.join(f'<th>{esc(str(c))}</th>' for c in A.anomalies['table'].head(10).columns) + '</tr>' + ''.join('<tr>' + ''.join(f'<td>{esc(str(v))}</td>' for v in row) + '</tr>' for row in A.anomalies['table'].head(10).itertuples(index=False)) + '</table>') if A.anomalies.get('available') and A.anomalies.get('total') and A.anomalies.get('table') is not None else '<p>No unusual-record table was available for this dataset.</p>'}
 <h2>Charts</h2>{chart_html}
 <h2>Data health</h2><p><span class="pill">{q['score']:.0f}/100 · {esc(q['band'])}</span></p>
 <ul>{''.join(f"<li><b>{esc(i['title'])}</b> — {esc(i['detail'])}</li>" for i in q['issues'][:8]) or '<li>No material issues.</li>'}</ul>

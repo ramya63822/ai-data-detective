@@ -16,14 +16,14 @@ SEG_COLORS = [BLUE, TEAL, AMBER, RED, GREEN, "#8e5bd4"]
 
 def _base(fig: go.Figure, title: str | None = None, height: int = 360) -> go.Figure:
     fig.update_layout(
-        title={"text": title, "x": 0, "font": {"size": 15, "color": NAVY}} if title else None,
+        title={"text": title, "x": 0, "font": {"size": 15, "color": GREY}} if title else None,
         height=height, margin=dict(l=10, r=10, t=48 if title else 16, b=10),
         paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-        font=dict(family="Inter, Segoe UI, sans-serif", size=12), hoverlabel=dict(font_size=12),
+        font=dict(family="Inter, Segoe UI, sans-serif", size=12, color=GREY), hoverlabel=dict(font_size=12),
         legend=dict(orientation="h", y=-0.18, x=0),
     )
-    fig.update_xaxes(showgrid=False, linecolor="#d5d9e2")
-    fig.update_yaxes(gridcolor="#e8ebf2", zeroline=False)
+    fig.update_xaxes(showgrid=False, linecolor="#8a94a6", tickfont=dict(color=GREY), title_font=dict(color=GREY))
+    fig.update_yaxes(gridcolor="rgba(138,148,166,0.25)", zeroline=False, tickfont=dict(color=GREY), title_font=dict(color=GREY))
     return fig
 
 

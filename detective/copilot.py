@@ -194,32 +194,44 @@ _SEMANTIC_MEASURE_HINTS: list[tuple[str, set[str], tuple[str, ...]]] = [
 
 
 def _measure_from_semantics(q: str, measures: list[str]) -> Optional[str]:
-    """Pick a measure from the meaning of the question, not only literal column-name overlap."""
+    """Resolve explicit business concepts only to matching measure names.
+
+    Never select a column merely because it shares a generic word such as
+    ``product`` with the question. In particular, Product Price is not revenue.
+    """
     ql = q.lower()
     qt = _qtokens(q)
 
-    def score(name: str, aliases: tuple[str, ...]) -> float:
-        raw = name.lower().replace("_", " ").replace("-", " ")
-        nt = {_stem(t) for t in re.findall(r"[a-z0-9]+", raw)}
-        s = 0.0
-        s += 4.0 * len(nt & {_stem(a) for a in aliases})
-        s += 1.5 * len(qt & nt)
-        # Prefer additive measures for volume-like questions.
-        if "sales" in raw and any(w in ql for w in ("sold", "shipped", "units", "boxes", "quantity", "volume")):
-            s -= 4.0
-        if "revenue" in raw and any(w in ql for w in ("sold", "shipped", "units", "boxes", "quantity")):
-            s -= 3.0
-        return s
-
-    for _, trigger_words, aliases in _SEMANTIC_MEASURE_HINTS:
-        # Compare single-word concepts against tokenized question terms. Raw substring
-        # matching caused false positives such as ``rate`` matching ``generated``.
-        matched = any((w in qt) or (" " in w and w in ql) for w in trigger_words)
-        if matched:
-            ranked = sorted(((score(m, aliases), i, m) for i, m in enumerate(measures)), reverse=True)
-            positive = [x for x in ranked if x[0] > 0]
-            if positive:
-                return positive[0][2]
+    concepts = [
+        ("revenue", {"revenue", "sales", "turnover", "income", "earnings", "amount", "money", "gmv"},
+         ("revenue", "sales", "turnover", "income", "earnings", "amount", "gmv")),
+        ("profit", {"profit", "margin", "profitability"}, ("profit", "margin")),
+        ("cost", {"cost", "expense", "spend", "spending"}, ("cost", "expense", "spend")),
+        ("salary", {"salary", "pay", "compensation", "wage"}, ("salary", "pay", "compensation", "wage")),
+        ("volume", {"sold", "sell", "shipped", "boxes", "units", "quantity", "qty", "volume", "ordered", "orders", "bookings", "shipments", "transactions", "tickets"},
+         ("quantity", "qty", "units", "unit", "volume", "shipped", "boxes", "orders", "bookings", "shipments", "tickets", "items")),
+        ("price", {"price", "pricing", "rate", "fare", "fee"}, ("price", "unitprice", "unit_price", "rate", "fare", "fee")),
+    ]
+    # Explicit monetary concepts take precedence over the word "sold" in queries
+    # such as "which product sold the most revenue?".
+    for concept, triggers, aliases in concepts:
+        if not (qt & triggers):
+            continue
+        ranked = []
+        for i, name in enumerate(measures):
+            raw = name.lower().replace("_", " ").replace("-", " ")
+            nt = {_stem(t) for t in re.findall(r"[a-z0-9]+", raw)}
+            alias_tokens = {_stem(a) for a in aliases}
+            score = 4.0 * len(nt & alias_tokens)
+            if concept == "volume" and any(x in nt for x in {"revenue", "sales", "amount", "income"}):
+                score -= 4.0
+            if score > 0:
+                ranked.append((score, -i, name))
+        if ranked:
+            return max(ranked)[2]
+        # The question explicitly asks for this kind of metric, but no matching
+        # measure exists. Do not fall back to a vaguely related numeric column.
+        return None
     return None
 
 
@@ -232,7 +244,12 @@ def rule_plan(q: str, ds: Dataset) -> Plan:
     # for business wording such as "sold the most" where Revenue may be the primary KPI
     # but Quantity is the requested measure.
     semantic_measure = _measure_from_semantics(q, all_meas)
-    measure = semantic_measure or _best(qt, all_meas)
+    qtokens = {_stem(t) for t in re.findall(r"[a-z0-9]+", q.lower())}
+    explicit_metric = bool(qtokens & {"revenue", "sale", "turnover", "income", "earning", "amount", "money", "gmv",
+                                      "profit", "margin", "cost", "expense", "spend", "salary", "pay", "wage",
+                                      "price", "pricing", "rate", "fare", "fee", "sold", "sell", "shipped",
+                                      "quantity", "qty", "unit", "volume", "order", "shipment", "ticket", "booking"})
+    measure = semantic_measure if explicit_metric else _best(qt, all_meas)
 
     dims = ds.categorical_dimensions + ds.entities + [d for d in ds.dimensions if ds.cols[d].role != "dimension"]
     dimension = _best(qt, [d for d in dims if d != measure])
