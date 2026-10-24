@@ -1,4 +1,4 @@
-"""AI Data Detective — executive decision-intelligence workspace (Streamlit)."""
+"""Datanovra AI — executive decision-intelligence workspace (Streamlit)."""
 from __future__ import annotations
 
 import hashlib
@@ -39,14 +39,14 @@ def _app_icon():
         im = Image.new("RGBA", (128, 128), (0, 0, 0, 0))
         d = ImageDraw.Draw(im)
         d.rounded_rectangle((0, 0, 127, 127), radius=28, fill=ACCENT)
-        d.ellipse((30, 28, 80, 78), outline="white", width=9)
-        d.line((72, 72, 98, 98), fill="white", width=11)
+        d.line([(26, 102), (51, 80), (70, 93), (96, 54)], fill="white", width=10, joint="curve")
+        d.polygon([(102, 22), (107, 40), (125, 45), (107, 50), (102, 67), (97, 50), (80, 45), (97, 40)], fill="white")
         return im
     except Exception:
         return "🔎"
 
 
-st.set_page_config(page_title="AI Data Detective", page_icon=_app_icon(), layout="wide",
+st.set_page_config(page_title="Datanovra AI", page_icon=_app_icon(), layout="wide",
                    initial_sidebar_state="expanded")
 
 
@@ -326,8 +326,8 @@ def _load(name: str, raw: bytes | Path):
 # Sidebar
 # --------------------------------------------------------------------------------------
 BRAND = ('<div class="brand"><svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#0B6E7F"/>'
-         '<circle cx="14" cy="14" r="6" fill="none" stroke="#fff" stroke-width="2.4"/><path d="M19 19l6 6" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/></svg>'
-         '<div><b>AI Data Detective</b><small>Decision intelligence</small></div></div>')
+         '<polyline points="6.4,25.6 12.8,20 17.6,23.2 24,13.6" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M25.6,5.6 L26.9,9.9 L31.2,11.2 L26.9,12.5 L25.6,16.8 L24.3,12.5 L20,11.2 L24.3,9.9 Z" fill="#fff"/></svg>'
+         '<div><b>Datanovra AI</b><small>Decision intelligence</small></div></div>')
 
 provider = llm.provider_name()
 
@@ -369,7 +369,7 @@ elif sample_choice and sample_choice != "—":
 # Empty state
 # --------------------------------------------------------------------------------------
 if raw is None:
-    page_header("Workspace", "AI Data Detective", "Decision intelligence for any dataset. Upload a file and the executive view builds itself.")
+    page_header("Workspace", "Datanovra AI", "Decision intelligence for any dataset. Upload a file and the executive view builds itself.")
     caps = [
         ("Executive view, instantly", "KPIs, trends, drivers, anomalies, risks and opportunities appear automatically. No questions needed."),
         ("Verified analysis", "Every number is computed deterministically. Questions such as “why did revenue decline?” run multi-step analysis, not guesses."),

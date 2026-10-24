@@ -1,6 +1,6 @@
 <div align="center">
 
-# AI Data Detective
+# Datanovra AI
 
 **From raw data to evidence-based decisions.**
 
@@ -12,10 +12,11 @@ An analytics workspace that profiles any CSV or Excel dataset, surfaces what cha
 ![scikit-learn](https://img.shields.io/badge/scikit--learn-ML-F7931E?logo=scikitlearn&logoColor=white)
 ![Pytest](https://img.shields.io/badge/tested%20with-pytest-0A9EDC?logo=pytest&logoColor=white)
 
-<!-- Replace with a screenshot of the Executive Overview tab -->
-<img src="docs/screenshots/overview.png" alt="AI Data Detective executive overview" width="900">
+<img src="docs/data-to-insights.png" alt="Datanovra AI turns one dataset into evidence-based decisions: profile, check quality, analyse, verify, explain" width="100%">
 
 </div>
+
+> Datanovra AI was previously developed under the working title *AI Data Detective*. The repository keeps its original name.
 
 ---
 
@@ -23,9 +24,9 @@ An analytics workspace that profiles any CSV or Excel dataset, surfaces what cha
 
 Spreadsheets hide patterns. Dashboards only show the metrics someone decided to build in advance. General-purpose AI chat can explain a dataset fluently, but it can also state numbers that were never computed.
 
-AI Data Detective takes a different approach: **a deterministic analysis engine does the math, and the AI layer only plans questions and explains verified results.**
+Datanovra AI takes a different approach: **a deterministic analysis engine does the math, and the AI layer only plans questions and explains verified results.**
 
-| | Static dashboard | General AI chat | AI Data Detective |
+| | Static dashboard | General AI chat | Datanovra AI |
 |---|---|---|---|
 | Works on any uploaded dataset | Needs setup per dataset | Yes | Yes |
 | Findings appear without asking | Only predefined metrics | No | Yes, automatic executive view |
@@ -112,7 +113,7 @@ flowchart TD
 ## Project structure
 
 ```text
-AI-Data-Detective/
+ai-data-detective/
 ├── web_app.py            # Streamlit interface
 ├── detective/
 │   ├── dataset.py        # Loading and field identification
